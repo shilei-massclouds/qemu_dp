@@ -61,6 +61,34 @@ config RISCV_VIRT
     select ACPI
     select ACPI_PCI
 
+config UR_DP1000
+    bool
+    default y
+    depends on RISCV32 || RISCV64
+    imply PCI_DEVICES
+    imply VIRTIO_VGA
+    imply TEST_DEVICES
+    imply TPM_TIS_SYSBUS
+    select DEVICE_TREE
+    select RISCV_NUMA
+    select GOLDFISH_RTC
+    select PCI
+    select PCI_EXPRESS_GENERIC_BRIDGE
+    select PFLASH_CFI01
+    select SERIAL_MM
+    select RISCV_ACLINT
+    select RISCV_APLIC
+    select RISCV_IOMMU
+    select RISCV_IMSIC
+    select SIFIVE_PLIC
+    select SIFIVE_TEST
+    select SMBIOS
+    select VIRTIO_MMIO
+    select FW_CFG_DMA
+    select PLATFORM_BUS
+    select ACPI
+    select ACPI_PCI
+
 config SHAKTI_C
     bool
     default y
