@@ -1779,10 +1779,10 @@ static void ur_dp1000_machine_class_init(ObjectClass *oc, void *data)
     MachineClass *mc = MACHINE_CLASS(oc);
     HotplugHandlerClass *hc = HOTPLUG_HANDLER_CLASS(oc);
 
-    mc->desc = "RISC-V VirtIO board";
+    mc->desc = "RISC-V UltraRISC DP1000 board";
     mc->init = ur_dp1000_machine_init;
     mc->max_cpus = UR_DP1000_CPUS_MAX;
-    mc->default_cpu_type = TYPE_RISCV_CPU_BASE;
+    mc->default_cpu_type = TYPE_RISCV_CPU_ULTRARISC_DP1000;
     mc->block_default_type = IF_VIRTIO;
     mc->no_cdrom = 1;
     mc->pci_allow_0_address = true;
