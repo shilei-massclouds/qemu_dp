@@ -88,6 +88,7 @@ config UR_DP1000
     select PLATFORM_BUS
     select ACPI
     select ACPI_PCI
+    select PCI_EXPRESS_DESIGNWARE
 
 config SHAKTI_C
     bool
