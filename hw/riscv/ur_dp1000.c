@@ -76,6 +76,7 @@ static const MemMapEntry ur_dp1000_memmap[] = {
     [UR_DP1000_CLINT] =        {  0x2000000,       0x10000 },
     [UR_DP1000_ACLINT_SSWI] =  {  0x2F00000,        0x4000 },
     [UR_DP1000_PCIE_PIO] =     {  0x3000000,       0x10000 },
+    [UR_DP1000_PCIE_DBI_0] =   {  0x3100000,     0x1000000 },
     [UR_DP1000_PLATFORM_BUS] = {  0x4000000,     0x2000000 },
     [UR_DP1000_PLIC] =         {  0x9000000, UR_DP1000_PLIC_SIZE(UR_DP1000_CPUS_MAX * 2) },
     [UR_DP1000_APLIC_M] =      {  0xc000000, APLIC_SIZE(UR_DP1000_CPUS_MAX) },
@@ -848,14 +849,14 @@ static void create_fdt_pcie(UltraRISCState *s, const MemMapEntry *memmap,
     MachineState *ms = MACHINE(s);
 
     name = g_strdup_printf("/soc/pci@%lx",
-        (long) memmap[UR_DP1000_PCIE_ECAM].base);
+        (long) memmap[UR_DP1000_PCIE_DBI_0].base);
     qemu_fdt_setprop_cell(ms->fdt, name, "#address-cells",
         FDT_PCI_ADDR_CELLS);
     qemu_fdt_setprop_cell(ms->fdt, name, "#interrupt-cells",
         FDT_PCI_INT_CELLS);
     qemu_fdt_setprop_cell(ms->fdt, name, "#size-cells", 0x2);
     qemu_fdt_setprop_string(ms->fdt, name, "compatible",
-        "pci-host-ecam-generic");
+        "ultrarisc,dw-pcie");
     qemu_fdt_setprop_string(ms->fdt, name, "device_type", "pci");
     qemu_fdt_setprop_cell(ms->fdt, name, "linux,pci-domain", 0);
     qemu_fdt_setprop_cells(ms->fdt, name, "bus-range", 0,
@@ -864,8 +865,11 @@ static void create_fdt_pcie(UltraRISCState *s, const MemMapEntry *memmap,
     if (s->aia_type == UR_DP1000_AIA_TYPE_APLIC_IMSIC) {
         qemu_fdt_setprop_cell(ms->fdt, name, "msi-parent", msi_pcie_phandle);
     }
-    qemu_fdt_setprop_cells(ms->fdt, name, "reg", 0,
-        memmap[UR_DP1000_PCIE_ECAM].base, 0, memmap[UR_DP1000_PCIE_ECAM].size);
+    qemu_fdt_setprop_cells(ms->fdt, name, "reg",
+                           0, memmap[UR_DP1000_PCIE_DBI_0].base,
+                           0, memmap[UR_DP1000_PCIE_DBI_0].size,
+                           0, memmap[UR_DP1000_PCIE_ECAM].base,
+                           0, memmap[UR_DP1000_PCIE_ECAM].size);
     qemu_fdt_setprop_sized_cells(ms->fdt, name, "ranges",
         1, FDT_PCI_RANGE_IOPORT, 2, 0,
         2, memmap[UR_DP1000_PCIE_PIO].base, 2, memmap[UR_DP1000_PCIE_PIO].size,
@@ -1003,7 +1007,7 @@ static void create_fdt_ur_dp1000io_iommu(UltraRISCState *s, uint16_t bdf)
     g_autofree char *pci_node = NULL;
 
     pci_node = g_strdup_printf("/soc/pci@%lx",
-                               (long) ur_dp1000_memmap[UR_DP1000_PCIE_ECAM].base);
+                               (long) ur_dp1000_memmap[UR_DP1000_PCIE_DBI_0].base);
     iommu_node = g_strdup_printf("%s/ur_dp1000io_iommu@%x,%x", pci_node,
                                  PCI_SLOT(bdf), PCI_FUNC(bdf));
     iommu_phandle = qemu_fdt_alloc_phandle(fdt);
@@ -1031,7 +1035,7 @@ static void create_fdt_iommu(UltraRISCState *s, uint16_t bdf)
     g_autofree char *pci_node = NULL;
 
     pci_node = g_strdup_printf("/soc/pci@%lx",
-                               (long) ur_dp1000_memmap[UR_DP1000_PCIE_ECAM].base);
+                               (long) ur_dp1000_memmap[UR_DP1000_PCIE_DBI_0].base);
     iommu_node = g_strdup_printf("%s/iommu@%x", pci_node, bdf);
     iommu_phandle = qemu_fdt_alloc_phandle(fdt);
     qemu_fdt_add_subnode(fdt, iommu_node);
@@ -1093,7 +1097,7 @@ static void create_fdt(UltraRISCState *s, const MemMapEntry *memmap)
      * The "/soc/pci@..." node is needed for PCIE hotplugs
      * that might happen before finalize_fdt().
      */
-    name = g_strdup_printf("/soc/pci@%lx", (long) memmap[UR_DP1000_PCIE_ECAM].base);
+    name = g_strdup_printf("/soc/pci@%lx", (long) memmap[UR_DP1000_PCIE_DBI_0].base);
     qemu_fdt_add_subnode(ms->fdt, name);
 
     qemu_fdt_add_subnode(ms->fdt, "/chosen");
@@ -1106,80 +1110,6 @@ static void create_fdt(UltraRISCState *s, const MemMapEntry *memmap)
     create_fdt_flash(s, memmap);
     create_fdt_fw_cfg(s, memmap);
     create_fdt_pmu(s);
-}
-
-static inline DeviceState *gpex_pcie_init(MemoryRegion *sys_mem,
-                                          DeviceState *irqchip,
-                                          UltraRISCState *s)
-{
-    DeviceState *dev;
-    MemoryRegion *ecam_alias, *ecam_reg;
-    MemoryRegion *mmio_alias, *high_mmio_alias, *mmio_reg;
-    hwaddr ecam_base = s->memmap[UR_DP1000_PCIE_ECAM].base;
-    hwaddr ecam_size = s->memmap[UR_DP1000_PCIE_ECAM].size;
-    hwaddr mmio_base = s->memmap[UR_DP1000_PCIE_MMIO].base;
-    hwaddr mmio_size = s->memmap[UR_DP1000_PCIE_MMIO].size;
-    hwaddr high_mmio_base = ur_dp1000_high_pcie_memmap.base;
-    hwaddr high_mmio_size = ur_dp1000_high_pcie_memmap.size;
-    hwaddr pio_base = s->memmap[UR_DP1000_PCIE_PIO].base;
-    hwaddr pio_size = s->memmap[UR_DP1000_PCIE_PIO].size;
-    qemu_irq irq;
-    int i;
-
-    dev = qdev_new(TYPE_GPEX_HOST);
-
-    /* Set GPEX object properties for the ur_dp1000 machine */
-    object_property_set_uint(OBJECT(GPEX_HOST(dev)), PCI_HOST_ECAM_BASE,
-                            ecam_base, NULL);
-    object_property_set_int(OBJECT(GPEX_HOST(dev)), PCI_HOST_ECAM_SIZE,
-                            ecam_size, NULL);
-    object_property_set_uint(OBJECT(GPEX_HOST(dev)),
-                             PCI_HOST_BELOW_4G_MMIO_BASE,
-                             mmio_base, NULL);
-    object_property_set_int(OBJECT(GPEX_HOST(dev)), PCI_HOST_BELOW_4G_MMIO_SIZE,
-                            mmio_size, NULL);
-    object_property_set_uint(OBJECT(GPEX_HOST(dev)),
-                             PCI_HOST_ABOVE_4G_MMIO_BASE,
-                             high_mmio_base, NULL);
-    object_property_set_int(OBJECT(GPEX_HOST(dev)), PCI_HOST_ABOVE_4G_MMIO_SIZE,
-                            high_mmio_size, NULL);
-    object_property_set_uint(OBJECT(GPEX_HOST(dev)), PCI_HOST_PIO_BASE,
-                            pio_base, NULL);
-    object_property_set_int(OBJECT(GPEX_HOST(dev)), PCI_HOST_PIO_SIZE,
-                            pio_size, NULL);
-
-    sysbus_realize_and_unref(SYS_BUS_DEVICE(dev), &error_fatal);
-
-    ecam_alias = g_new0(MemoryRegion, 1);
-    ecam_reg = sysbus_mmio_get_region(SYS_BUS_DEVICE(dev), 0);
-    memory_region_init_alias(ecam_alias, OBJECT(dev), "pcie-ecam",
-                             ecam_reg, 0, ecam_size);
-    memory_region_add_subregion(get_system_memory(), ecam_base, ecam_alias);
-
-    mmio_alias = g_new0(MemoryRegion, 1);
-    mmio_reg = sysbus_mmio_get_region(SYS_BUS_DEVICE(dev), 1);
-    memory_region_init_alias(mmio_alias, OBJECT(dev), "pcie-mmio",
-                             mmio_reg, mmio_base, mmio_size);
-    memory_region_add_subregion(get_system_memory(), mmio_base, mmio_alias);
-
-    /* Map high MMIO space */
-    high_mmio_alias = g_new0(MemoryRegion, 1);
-    memory_region_init_alias(high_mmio_alias, OBJECT(dev), "pcie-mmio-high",
-                             mmio_reg, high_mmio_base, high_mmio_size);
-    memory_region_add_subregion(get_system_memory(), high_mmio_base,
-                                high_mmio_alias);
-
-    sysbus_mmio_map(SYS_BUS_DEVICE(dev), 2, pio_base);
-
-    for (i = 0; i < GPEX_NUM_IRQS; i++) {
-        irq = qdev_get_gpio_in(irqchip, PCIE_IRQ + i);
-
-        sysbus_connect_irq(SYS_BUS_DEVICE(dev), i, irq);
-        gpex_set_irq_num(GPEX_HOST(dev), i, PCIE_IRQ + i);
-    }
-
-    GPEX_HOST(dev)->gpex_cfg.bus = PCI_HOST_BRIDGE(GPEX_HOST(dev))->bus;
-    return dev;
 }
 
 static FWCfgState *create_fw_cfg(const MachineState *ms)
@@ -1434,6 +1364,29 @@ static void ur_dp1000_machine_done(Notifier *notifier, void *data)
     ur_dp1000_build_smbios(s);
 }
 
+static inline DesignwarePCIEHost *
+dw_pcie_init_one(MemoryRegion *sys_mem,
+                 DeviceState *irqchip,
+                 UltraRISCState *s,
+                 uint64_t dbi_idx,
+                 const char *name)
+{
+    DeviceState *dev;
+    MemoryRegion *dbi_alias, *dbi_reg;
+    hwaddr dbi_base = s->memmap[dbi_idx].base;
+    hwaddr dbi_size = s->memmap[dbi_idx].size;
+
+    dev = qdev_new(TYPE_DESIGNWARE_PCIE_HOST);
+    sysbus_realize_and_unref(SYS_BUS_DEVICE(dev), &error_fatal);
+
+    dbi_alias = g_new0(MemoryRegion, 1);
+    dbi_reg = sysbus_mmio_get_region(SYS_BUS_DEVICE(dev), 0);
+    memory_region_init_alias(dbi_alias, OBJECT(dev), name,
+                             dbi_reg, 0, dbi_size);
+    memory_region_add_subregion(get_system_memory(), dbi_base, dbi_alias);
+    return DESIGNWARE_PCIE_HOST(dev);
+}
+
 static void ur_dp1000_machine_init(MachineState *machine)
 {
     const MemMapEntry *memmap = ur_dp1000_memmap;
@@ -1606,7 +1559,8 @@ static void ur_dp1000_machine_init(MachineState *machine)
             qdev_get_gpio_in(ur_dp1000io_irqchip, VIRTIO_IRQ + i));
     }
 
-    gpex_pcie_init(system_memory, pcie_irqchip, s);
+    dw_pcie_init_one(system_memory, pcie_irqchip, s,
+                     UR_DP1000_PCIE_DBI_0, "pcie-x16-reg");
 
     create_platform_bus(s, mmio_irqchip);
 

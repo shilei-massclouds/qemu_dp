@@ -24,6 +24,7 @@
 #include "hw/sysbus.h"
 #include "hw/block/flash.h"
 #include "hw/intc/riscv_imsic.h"
+#include "hw/pci-host/designware.h"
 
 #define UR_DP1000_CPUS_MAX_BITS             9
 #define UR_DP1000_CPUS_MAX                  (1 << UR_DP1000_CPUS_MAX_BITS)
@@ -61,7 +62,7 @@ struct UltraRISCState {
     char *oem_table_id;
     OnOffAuto acpi;
     const MemMapEntry *memmap;
-    struct GPEXHost *gpex_host;
+    DesignwarePCIEHost pcie;
 };
 
 enum {
@@ -84,7 +85,8 @@ enum {
     UR_DP1000_PCIE_MMIO,
     UR_DP1000_PCIE_PIO,
     UR_DP1000_PLATFORM_BUS,
-    UR_DP1000_PCIE_ECAM
+    UR_DP1000_PCIE_ECAM,
+    UR_DP1000_PCIE_DBI_0
 };
 
 enum {
