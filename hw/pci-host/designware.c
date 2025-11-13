@@ -233,9 +233,16 @@ static uint64_t designware_pcie_root_data_access(void *opaque, hwaddr addr,
                                          pci_config_size(pcidev),
                                          *val, len);
         } else {
+#if 0
             return pci_host_config_read_common(pcidev, addr,
                                                pci_config_size(pcidev),
                                                len);
+#endif
+            uint64_t ret = pci_host_config_read_common(pcidev, addr,
+                                                       pci_config_size(pcidev),
+                                                       len);
+            printf("%s: [%s] addr(%lx) ret(%lx)\n", __func__, pcidev->name, addr, ret);
+            return ret;
         }
     }
 
