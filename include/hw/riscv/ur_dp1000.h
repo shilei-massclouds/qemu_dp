@@ -25,6 +25,7 @@
 #include "hw/block/flash.h"
 #include "hw/intc/riscv_imsic.h"
 #include "hw/pci-host/designware.h"
+#include "hw/gpio/sifive_gpio.h"
 
 #define UR_DP1000_CPUS_MAX_BITS             9
 #define UR_DP1000_CPUS_MAX                  (1 << UR_DP1000_CPUS_MAX_BITS)
@@ -63,8 +64,57 @@ struct UltraRISCState {
     OnOffAuto acpi;
     const MemMapEntry *memmap;
     DesignwarePCIEHost pcie;
+    SIFIVEGPIOState gpio;
 };
 
+enum {
+    UR_DP1000_DEBUG,
+    UR_DP1000_MROM,
+    UR_DP1000_TEST,
+    UR_DP1000_RTC,
+    UR_DP1000_CLINT,
+    UR_DP1000_ACLINT_SSWI,
+    UR_DP1000_PLIC,
+    UR_DP1000_APLIC_M,
+    UR_DP1000_APLIC_S,
+    UR_DP1000_UART0,
+    UR_DP1000_VIRTIO,
+    UR_DP1000_FW_CFG,
+    UR_DP1000_IMSIC_M,
+    UR_DP1000_IMSIC_S,
+    UR_DP1000_FLASH,
+    UR_DP1000_DRAM,
+    UR_DP1000_PCIE_PIO0,
+    UR_DP1000_PCIE_MMIO_0,
+    UR_DP1000_PCIE_MMIO64_0,
+    UR_DP1000_PCIE_PIO1,
+    UR_DP1000_PCIE_MMIO_1,
+    UR_DP1000_PCIE_MMIO64_1,
+    UR_DP1000_PCIE_PIO2,
+    UR_DP1000_PCIE_MMIO_2,
+    UR_DP1000_PCIE_MMIO64_2,
+    UR_DP1000_PLATFORM_BUS,
+    UR_DP1000_GPIO,
+    UR_DP1000_PCIE_DBI_0,
+    UR_DP1000_PCIE_DBI_1,
+    UR_DP1000_PCIE_DBI_2,
+    UR_DP1000_PCIE_CFG0,
+    UR_DP1000_PCIE_CFG1,
+    UR_DP1000_PCIE_CFG2,
+    UR_DP1000_PINMUX,
+    UR_DP1000_UART1,
+    UR_DP1000_UART2,
+    UR_DP1000_UART3,
+    UR_DP1000_UART4,
+    UR_DP1000_SPI0,
+    UR_DP1000_SPI1,
+    UR_DP1000_I2C0,
+    UR_DP1000_I2C1,
+    UR_DP1000_I2C2,
+    UR_DP1000_I2C3,
+};
+
+#if 0
 enum {
     UR_DP1000_DEBUG,
     UR_DP1000_MROM,
@@ -88,6 +138,7 @@ enum {
     UR_DP1000_PCIE_ECAM,
     UR_DP1000_PCIE_DBI_0
 };
+#endif
 
 enum {
     UART0_IRQ = 10,

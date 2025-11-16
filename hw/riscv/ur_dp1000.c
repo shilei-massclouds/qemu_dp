@@ -56,6 +56,8 @@
 #include "hw/acpi/aml-build.h"
 #include "qapi/qapi-visit-common.h"
 #include "hw/virtio/virtio-iommu.h"
+#include "hw/riscv/sifive_u.h"
+#include "hw/misc/unimp.h"
 
 /* KVM AIA only supports APLIC MSI. APLIC Wired is always emulated by QEMU. */
 static bool ur_dp1000_use_kvm_aia(UltraRISCState *s)
@@ -68,6 +70,7 @@ static bool ur_dp1000_aclint_allowed(void)
     return tcg_enabled() || qtest_enabled();
 }
 
+#if 0
 static const MemMapEntry ur_dp1000_memmap[] = {
     [UR_DP1000_DEBUG] =        {        0x0,         0x100 },
     [UR_DP1000_MROM] =         {     0x1000,        0xf000 },
@@ -89,6 +92,57 @@ static const MemMapEntry ur_dp1000_memmap[] = {
     [UR_DP1000_IMSIC_S] =      { 0x28000000, UR_DP1000_IMSIC_MAX_SIZE },
     [UR_DP1000_PCIE_ECAM] =    { 0x30000000,    0x10000000 },
     [UR_DP1000_PCIE_MMIO] =    { 0x40000000,    0x40000000 },
+    [UR_DP1000_DRAM] =         { 0x80000000,           0x0 },
+};
+#endif
+
+static const MemMapEntry ur_dp1000_memmap[] = {
+    [UR_DP1000_DEBUG] =        {        0x0,         0x100 },
+    [UR_DP1000_MROM] =         {     0x1000,        0xf000 },
+    [UR_DP1000_TEST] =         {   0x100000,        0x1000 },
+    [UR_DP1000_RTC] =          {   0x101000,        0x1000 },
+    [UR_DP1000_CLINT] =        {  0x2000000,       0x10000 },
+    [UR_DP1000_ACLINT_SSWI] =  {  0x2F00000,        0x4000 },
+    [UR_DP1000_PLATFORM_BUS] = {  0x4000000,     0x2000000 },
+    [UR_DP1000_PLIC] =         {  0x9000000, UR_DP1000_PLIC_SIZE(UR_DP1000_CPUS_MAX * 2) },
+    [UR_DP1000_APLIC_M] =      {  0xc000000, APLIC_SIZE(UR_DP1000_CPUS_MAX) },
+    [UR_DP1000_APLIC_S] =      {  0xd000000, APLIC_SIZE(UR_DP1000_CPUS_MAX) },
+    [UR_DP1000_UART0] =        { 0x10000000,         0x100 },
+    [UR_DP1000_VIRTIO] =       { 0x10001000,        0x1000 },
+    [UR_DP1000_FW_CFG] =       { 0x10100000,          0x18 },
+    [UR_DP1000_PINMUX] =       { 0x11081000,        0x1000 },
+    [UR_DP1000_FLASH] =        { 0x12000000,     0x4000000 },
+    [UR_DP1000_GPIO] =         { 0x20200000,        0x1000 },
+    [UR_DP1000_UART1] =        { 0x20300000,       0x10000 },
+    [UR_DP1000_UART2] =        { 0x20310000,       0x10000 },
+    [UR_DP1000_SPI0] =         { 0x20320000,        0x1000 },
+    [UR_DP1000_I2C0] =         { 0x20330000,         0x100 },
+    [UR_DP1000_I2C1] =         { 0x20340000,         0x100 },
+    [UR_DP1000_UART3] =        { 0x20400000,       0x10000 },
+    [UR_DP1000_UART4] =        { 0x20410000,       0x10000 },
+    [UR_DP1000_SPI1] =         { 0x20420000,        0x1000 },
+    [UR_DP1000_I2C2] =         { 0x20430000,         0x100 },
+    [UR_DP1000_I2C3] =         { 0x20440000,         0x100 },
+    [UR_DP1000_PCIE_DBI_0] =   { 0x21000000,    0x01000000 },
+    [UR_DP1000_PCIE_DBI_1] =   { 0x23000000,    0x01000000 },
+    [UR_DP1000_PCIE_DBI_2] =   { 0x24000000,    0x01000000 },
+    [UR_DP1000_PCIE_CFG0] =    { 0x4fff0000,       0x10000 },
+    [UR_DP1000_PCIE_CFG1] =    { 0x6fff0000,       0x10000 },
+    [UR_DP1000_PCIE_CFG2] =    { 0x7fff0000,       0x10000 },
+    [UR_DP1000_IMSIC_M] =      { 0x24000000, UR_DP1000_IMSIC_MAX_SIZE },
+    [UR_DP1000_IMSIC_S] =      { 0x28000000, UR_DP1000_IMSIC_MAX_SIZE },
+    [UR_DP1000_PCIE_PIO0] =    { 0x4fbf0000,      0x400000 },
+    [UR_DP1000_PCIE_MMIO_0] =  { 0x40000000,     0xfbf0000 },
+    //[UR_DP1000_PCIE_MMIO64_0] ={ 0x4000000000, 0xd00000000 },
+    [UR_DP1000_PCIE_MMIO64_0] ={ 0x400000000,   0x10000000 },
+    [UR_DP1000_PCIE_PIO1] =    { 0x6fbf0000,      0x400000 },
+    [UR_DP1000_PCIE_MMIO_1] =  { 0x60000000,     0xfbf0000 },
+    //[UR_DP1000_PCIE_MMIO64_1] ={ 0x8000000000, 0xd00000000 },
+    [UR_DP1000_PCIE_MMIO64_1] ={ 0x800000000,   0x10000000 },
+    [UR_DP1000_PCIE_PIO2] =    { 0x7fbf0000,      0x400000 },
+    [UR_DP1000_PCIE_MMIO_2] =  { 0x70000000,     0xfbf0000 },
+    //[UR_DP1000_PCIE_MMIO64_2] ={ 0xc000000000, 0xd00000000 },
+    [UR_DP1000_PCIE_MMIO64_2] ={ 0xc00000000,   0x10000000 },
     [UR_DP1000_DRAM] =         { 0x80000000,           0x0 },
 };
 
@@ -164,6 +218,7 @@ static void ur_dp1000_flash_map(UltraRISCState *s,
                     sysmem);
 }
 
+#if 0
 static void create_pcie_irq_map(UltraRISCState *s, void *fdt, char *nodename,
                                 uint32_t irqchip_phandle)
 {
@@ -217,6 +272,7 @@ static void create_pcie_irq_map(UltraRISCState *s, void *fdt, char *nodename,
     qemu_fdt_setprop_cells(fdt, nodename, "interrupt-map-mask",
                            0x1800, 0, 0, 0x7);
 }
+#endif
 
 static void create_fdt_socket_cpus(UltraRISCState *s, int socket,
                                    char *clust_name, uint32_t *phandle,
@@ -841,6 +897,7 @@ static void create_fdt_ur_dp1000io(UltraRISCState *s, const MemMapEntry *memmap,
     }
 }
 
+#if 0
 static void create_fdt_pcie(UltraRISCState *s, const MemMapEntry *memmap,
                             uint32_t irq_pcie_phandle,
                             uint32_t msi_pcie_phandle)
@@ -881,6 +938,89 @@ static void create_fdt_pcie(UltraRISCState *s, const MemMapEntry *memmap,
         2, ur_dp1000_high_pcie_memmap.base, 2, ur_dp1000_high_pcie_memmap.size);
 
     create_pcie_irq_map(s, ms->fdt, name, irq_pcie_phandle);
+}
+#endif
+
+static void create_fdt_pcie(UltraRISCState *s, const MemMapEntry *memmap,
+                            uint32_t irq_pcie_phandle,
+                            uint32_t msi_pcie_phandle,
+                            uint32_t dbi_idx,
+                            uint32_t cfg_idx,
+                            uint32_t pio_idx,
+                            uint32_t mmio_idx,
+                            uint32_t mmio64_idx,
+                            uint32_t irq_idx)
+{
+    g_autofree char *name = NULL;
+    MachineState *ms = MACHINE(s);
+
+    name = g_strdup_printf("/soc/pci@%lx", (long) memmap[dbi_idx].base);
+    qemu_fdt_setprop_string(ms->fdt, name, "compatible", "ultrarisc,dw-pcie");
+    qemu_fdt_setprop_cell(ms->fdt, name, "#address-cells", FDT_PCI_ADDR_CELLS);
+    qemu_fdt_setprop_cell(ms->fdt, name, "#size-cells", 0x2);
+    qemu_fdt_setprop_cell(ms->fdt, name, "#interrupt-cells", FDT_PCI_INT_CELLS);
+
+    qemu_fdt_setprop_cells(ms->fdt, name, "reg",
+                           0, memmap[dbi_idx].base, 0, memmap[dbi_idx].size,
+                           0, memmap[cfg_idx].base, 0, memmap[cfg_idx].size);
+    qemu_fdt_setprop_string(ms->fdt, name, "reg-names", "dbi\0config");
+    qemu_fdt_setprop_string(ms->fdt, name, "device_type", "pci");
+    qemu_fdt_setprop(ms->fdt, name, "dma-coherent", NULL, 0);
+
+    qemu_fdt_setprop_cells(ms->fdt, name, "bus-range", 0, 0xff);
+    qemu_fdt_setprop_cell(ms->fdt, name, "num-lanes", 0x10);
+
+    qemu_fdt_setprop_sized_cells(ms->fdt, name, "ranges",
+        1, FDT_PCI_RANGE_IOPORT|FDT_PCI_RANGE_RELOCATABLE,
+        2, memmap[pio_idx].base,
+        2, memmap[pio_idx].base,
+        2, memmap[pio_idx].size,
+        1, FDT_PCI_RANGE_MMIO|FDT_PCI_RANGE_RELOCATABLE,
+        2, memmap[mmio_idx].base,
+        2, memmap[mmio_idx].base,
+        2, memmap[mmio_idx].size,
+        1, FDT_PCI_RANGE_MMIO_64BIT|FDT_PCI_RANGE_RELOCATABLE|FDT_PCI_RANGE_PREFETCHABLE,
+        2, memmap[mmio64_idx].base,
+        2, memmap[mmio64_idx].base,
+        2, memmap[mmio64_idx].size);
+
+    qemu_fdt_setprop_cell(ms->fdt, name, "max-link-speed", 0x04);
+    qemu_fdt_setprop_cell(ms->fdt, name, "interrupt-parent", 0x01);
+    qemu_fdt_setprop_string(ms->fdt, name, "interrupt-names", "msi\0inta\0intb\0intc\0intd\0aer");
+    qemu_fdt_setprop_cells(ms->fdt, name, "interrupt-map-mask", 0x00, 0x00, 0x00, 0x07);
+
+    switch (irq_idx) {
+        case 0:
+            qemu_fdt_setprop_cells(ms->fdt, name, "interrupts", 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30);
+            qemu_fdt_setprop_cells(ms->fdt, name, "interrupt-map",
+                                   0x00, 0x00, 0x00, 0x01, 0x01, 0x2c,
+                                   0x00, 0x00, 0x00, 0x02, 0x01, 0x2d,
+                                   0x00, 0x00, 0x00, 0x03, 0x01, 0x2e,
+                                   0x00, 0x00, 0x00, 0x04, 0x01, 0x2f);
+
+            break;
+        case 1:
+            qemu_fdt_setprop_cells(ms->fdt, name, "interrupts", 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44);
+            qemu_fdt_setprop_cells(ms->fdt, name, "interrupt-map",
+                                   0x00, 0x00, 0x00, 0x01, 0x01, 0x40,
+                                   0x00, 0x00, 0x00, 0x02, 0x01, 0x41,
+                                   0x00, 0x00, 0x00, 0x03, 0x01, 0x42,
+                                   0x00, 0x00, 0x00, 0x04, 0x01, 0x43);
+            break;
+        case 2:
+            qemu_fdt_setprop_cells(ms->fdt, name, "interrupts", 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e);
+            qemu_fdt_setprop_cells(ms->fdt, name, "interrupt-map",
+                                   0x00, 0x00, 0x00, 0x01, 0x01, 0x4a,
+                                   0x00, 0x00, 0x00, 0x02, 0x01, 0x4b,
+                                   0x00, 0x00, 0x00, 0x03, 0x01, 0x4c,
+                                   0x00, 0x00, 0x00, 0x04, 0x01, 0x4d);
+            break;
+        default:
+            printf("bad irq index %d\n", irq_idx);
+            exit(-1);
+    }
+
+    //create_pcie_irq_map(s, ms->fdt, name, irq_pcie_phandle);
 }
 
 static void create_fdt_reset(UltraRISCState *s, const MemMapEntry *memmap,
@@ -1061,7 +1201,27 @@ static void finalize_fdt(UltraRISCState *s)
 
     create_fdt_ur_dp1000io(s, ur_dp1000_memmap, irq_ur_dp1000io_phandle);
 
-    create_fdt_pcie(s, ur_dp1000_memmap, irq_pcie_phandle, msi_pcie_phandle);
+#if 0
+    create_fdt_pcie(s, ur_dp1000_memmap, irq_pcie_phandle, msi_pcie_phandle,
+                    UR_DP1000_PCIE_DBI_2, UR_DP1000_PCIE_CFG2,
+                    UR_DP1000_PCIE_PIO2,
+                    UR_DP1000_PCIE_MMIO_2, UR_DP1000_PCIE_MMIO64_2,
+                    2);
+
+    create_fdt_pcie(s, ur_dp1000_memmap, irq_pcie_phandle, msi_pcie_phandle,
+                    UR_DP1000_PCIE_DBI_1, UR_DP1000_PCIE_CFG1,
+                    UR_DP1000_PCIE_PIO1,
+                    UR_DP1000_PCIE_MMIO_1, UR_DP1000_PCIE_MMIO64_1,
+                    1);
+#endif
+
+    create_fdt_pcie(s, ur_dp1000_memmap, irq_pcie_phandle, msi_pcie_phandle,
+                    UR_DP1000_PCIE_DBI_0, UR_DP1000_PCIE_CFG0,
+                    UR_DP1000_PCIE_PIO0,
+                    UR_DP1000_PCIE_MMIO_0, UR_DP1000_PCIE_MMIO64_0,
+                    0);
+
+    //create_fdt_pcie(s, ur_dp1000_memmap, irq_pcie_phandle, msi_pcie_phandle);
 
     create_fdt_reset(s, ur_dp1000_memmap, &phandle);
 
@@ -1097,6 +1257,15 @@ static void create_fdt(UltraRISCState *s, const MemMapEntry *memmap)
      * The "/soc/pci@..." node is needed for PCIE hotplugs
      * that might happen before finalize_fdt().
      */
+
+#if 0
+    name = g_strdup_printf("/soc/pci@%lx", (long) memmap[UR_DP1000_PCIE_DBI_2].base);
+    qemu_fdt_add_subnode(ms->fdt, name);
+
+    name = g_strdup_printf("/soc/pci@%lx", (long) memmap[UR_DP1000_PCIE_DBI_1].base);
+    qemu_fdt_add_subnode(ms->fdt, name);
+#endif
+
     name = g_strdup_printf("/soc/pci@%lx", (long) memmap[UR_DP1000_PCIE_DBI_0].base);
     qemu_fdt_add_subnode(ms->fdt, name);
 
@@ -1560,6 +1729,12 @@ static void ur_dp1000_machine_init(MachineState *machine)
     }
 
     dw_pcie_init_one(system_memory, pcie_irqchip, s,
+                     UR_DP1000_PCIE_DBI_1, "pcie-x4a-reg");
+
+    dw_pcie_init_one(system_memory, pcie_irqchip, s,
+                     UR_DP1000_PCIE_DBI_2, "pcie-x4b-reg");
+
+    dw_pcie_init_one(system_memory, pcie_irqchip, s,
                      UR_DP1000_PCIE_DBI_0, "pcie-x16-reg");
 
     create_platform_bus(s, mmio_irqchip);
@@ -1568,8 +1743,41 @@ static void ur_dp1000_machine_init(MachineState *machine)
         0, qdev_get_gpio_in(mmio_irqchip, UART0_IRQ), 399193,
         serial_hd(0), DEVICE_LITTLE_ENDIAN);
 
+    serial_mm_init(system_memory, memmap[UR_DP1000_UART1].base,
+        2, qdev_get_gpio_in(mmio_irqchip, UART0_IRQ), 399193,
+        serial_hd(1), DEVICE_LITTLE_ENDIAN);
+
+    serial_mm_init(system_memory, memmap[UR_DP1000_UART2].base,
+        2, qdev_get_gpio_in(mmio_irqchip, UART0_IRQ), 399193,
+        serial_hd(2), DEVICE_LITTLE_ENDIAN);
+
+    serial_mm_init(system_memory, memmap[UR_DP1000_UART3].base,
+        2, qdev_get_gpio_in(mmio_irqchip, UART0_IRQ), 399193,
+        serial_hd(3), DEVICE_LITTLE_ENDIAN);
+
+    serial_mm_init(system_memory, memmap[UR_DP1000_UART4].base,
+        2, qdev_get_gpio_in(mmio_irqchip, UART0_IRQ), 399193,
+        serial_hd(4), DEVICE_LITTLE_ENDIAN);
+
+    create_unimplemented_device("spi0", memmap[UR_DP1000_SPI0].base, memmap[UR_DP1000_SPI0].size);
+    create_unimplemented_device("spi1", memmap[UR_DP1000_SPI1].base, memmap[UR_DP1000_SPI1].size);
+
+    create_unimplemented_device("i2c0", memmap[UR_DP1000_I2C0].base, memmap[UR_DP1000_I2C0].size);
+    create_unimplemented_device("i2c1", memmap[UR_DP1000_I2C1].base, memmap[UR_DP1000_I2C1].size);
+    create_unimplemented_device("i2c2", memmap[UR_DP1000_I2C2].base, memmap[UR_DP1000_I2C2].size);
+    create_unimplemented_device("i2c3", memmap[UR_DP1000_I2C3].base, memmap[UR_DP1000_I2C3].size);
+
     sysbus_create_simple("goldfish_rtc", memmap[UR_DP1000_RTC].base,
         qdev_get_gpio_in(mmio_irqchip, RTC_IRQ));
+
+    object_initialize_child(OBJECT(machine), "gpio", &s->gpio, TYPE_SIFIVE_GPIO);
+    qdev_prop_set_uint32(DEVICE(&s->gpio), "ngpio", 16);
+    if (!sysbus_realize(SYS_BUS_DEVICE(&s->gpio), &error_fatal)) {
+        return;
+    }
+    sysbus_mmio_map(SYS_BUS_DEVICE(&s->gpio), 0, memmap[UR_DP1000_GPIO].base);
+
+    create_unimplemented_device("pinmux", memmap[UR_DP1000_PINMUX].base, memmap[UR_DP1000_PINMUX].size);
 
     for (i = 0; i < ARRAY_SIZE(s->flash); i++) {
         /* Map legacy -drive if=pflash to machine properties */

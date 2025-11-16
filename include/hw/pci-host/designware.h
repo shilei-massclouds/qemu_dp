@@ -67,7 +67,7 @@ struct DesignwarePCIERoot {
 
 #define DESIGNWARE_PCIE_VIEWPORT_OUTBOUND    0
 #define DESIGNWARE_PCIE_VIEWPORT_INBOUND     1
-#define DESIGNWARE_PCIE_NUM_VIEWPORTS        4
+#define DESIGNWARE_PCIE_NUM_VIEWPORTS        16
 
     DesignwarePCIEViewport viewports[2][DESIGNWARE_PCIE_NUM_VIEWPORTS];
     DesignwarePCIEMSI msi;
