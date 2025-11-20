@@ -133,16 +133,16 @@ static const MemMapEntry ur_dp1000_memmap[] = {
     [UR_DP1000_IMSIC_S] =      { 0x28000000, UR_DP1000_IMSIC_MAX_SIZE },
     [UR_DP1000_PCIE_PIO0] =    { 0x4fbf0000,      0x400000 },
     [UR_DP1000_PCIE_MMIO_0] =  { 0x40000000,     0xfbf0000 },
-    //[UR_DP1000_PCIE_MMIO64_0] ={ 0x4000000000, 0xd00000000 },
-    [UR_DP1000_PCIE_MMIO64_0] ={ 0x400000000,   0x10000000 },
+    [UR_DP1000_PCIE_MMIO64_0] ={ 0x4000000000, 0xd00000000 },
+    //[UR_DP1000_PCIE_MMIO64_0] ={ 0x400000000,   0x10000000 },
     [UR_DP1000_PCIE_PIO1] =    { 0x6fbf0000,      0x400000 },
     [UR_DP1000_PCIE_MMIO_1] =  { 0x60000000,     0xfbf0000 },
-    //[UR_DP1000_PCIE_MMIO64_1] ={ 0x8000000000, 0xd00000000 },
-    [UR_DP1000_PCIE_MMIO64_1] ={ 0x800000000,   0x10000000 },
+    [UR_DP1000_PCIE_MMIO64_1] ={ 0x8000000000, 0xd00000000 },
+    //[UR_DP1000_PCIE_MMIO64_1] ={ 0x800000000,   0x10000000 },
     [UR_DP1000_PCIE_PIO2] =    { 0x7fbf0000,      0x400000 },
     [UR_DP1000_PCIE_MMIO_2] =  { 0x70000000,     0xfbf0000 },
-    //[UR_DP1000_PCIE_MMIO64_2] ={ 0xc000000000, 0xd00000000 },
-    [UR_DP1000_PCIE_MMIO64_2] ={ 0xc00000000,   0x10000000 },
+    [UR_DP1000_PCIE_MMIO64_2] ={ 0xc000000000, 0xd00000000 },
+    //[UR_DP1000_PCIE_MMIO64_2] ={ 0xc00000000,   0x10000000 },
     [UR_DP1000_DRAM] =         { 0x80000000,           0x0 },
 };
 
@@ -493,7 +493,7 @@ static void create_fdt_socket_plic(UltraRISCState *s,
     unsigned long plic_addr;
     MachineState *ms = MACHINE(s);
     static const char * const plic_compat[2] = {
-        "sifive,plic-1.0.0", "riscv,plic0"
+        "ultrarisc,dp1000-plic", "riscv,plic0"
     };
 
     plic_phandles[socket] = (*phandle)++;
@@ -1302,6 +1302,7 @@ static DeviceState *ur_dp1000_create_plic(const MemMapEntry *memmap, int socket,
     /* Per-socket PLIC hart topology configuration string */
     plic_hart_config = riscv_plic_hart_config_string(hart_count);
 
+    printf("%s: ...\n", __func__);
     /* Per-socket PLIC */
     ret = sifive_plic_create(
             memmap[UR_DP1000_PLIC].base + socket * memmap[UR_DP1000_PLIC].size,
@@ -1395,7 +1396,11 @@ static void create_platform_bus(UltraRISCState *s, DeviceState *irqchip)
     sysbus = SYS_BUS_DEVICE(dev);
     for (i = 0; i < UR_DP1000_PLATFORM_BUS_NUM_IRQS; i++) {
         int irq = UR_DP1000_PLATFORM_BUS_IRQ + i;
+        printf("---> %s: [%s:%p] i(%d) irq(%d) irqchip(%p)\n",
+               __func__, dev->canonical_path, dev, i, irq,
+               qdev_get_gpio_in(irqchip, irq));
         sysbus_connect_irq(sysbus, i, qdev_get_gpio_in(irqchip, irq));
+        printf("<--- %s\n", __func__);
     }
 
     memory_region_add_subregion(sysmem,
@@ -1553,6 +1558,11 @@ dw_pcie_init_one(MemoryRegion *sys_mem,
     memory_region_init_alias(dbi_alias, OBJECT(dev), name,
                              dbi_reg, 0, dbi_size);
     memory_region_add_subregion(get_system_memory(), dbi_base, dbi_alias);
+
+    printf("%s: dev(%p) irqchip(%p)\n", __func__, dev, irqchip);
+    /* Note: Fix with MSI */
+    sysbus_connect_irq(SYS_BUS_DEVICE(dev), 3, qdev_get_gpio_in(irqchip, 0x2b));
+    sysbus_connect_irq(SYS_BUS_DEVICE(dev), 0, qdev_get_gpio_in(irqchip, 0x2c));
     return DESIGNWARE_PCIE_HOST(dev);
 }
 
@@ -1667,10 +1677,10 @@ static void ur_dp1000_machine_init(MachineState *machine)
         }
         if (i == 1) {
             ur_dp1000io_irqchip = s->irqchip[i];
-            pcie_irqchip = s->irqchip[i];
+            //pcie_irqchip = s->irqchip[i];
         }
         if (i == 2) {
-            pcie_irqchip = s->irqchip[i];
+            //pcie_irqchip = s->irqchip[i];
         }
     }
 
