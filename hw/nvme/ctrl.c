@@ -227,6 +227,9 @@
 #define NVME_VF_OFFSET 0x1
 #define NVME_VF_STRIDE 1
 
+#define PCI_VENDOR_ID_SAMSUNG       0x144D
+#define PCI_DEVICE_ID_SAMSUNG_NVME  0xA80D
+
 #define NVME_GUEST_ERR(trace, fmt, ...) \
     do { \
         (trace_##trace)(__VA_ARGS__); \
@@ -8484,7 +8487,7 @@ out:
 static void nvme_init_sriov(NvmeCtrl *n, PCIDevice *pci_dev, uint16_t offset)
 {
     uint16_t vf_dev_id = n->params.use_intel_id ?
-                         PCI_DEVICE_ID_INTEL_NVME : PCI_DEVICE_ID_REDHAT_NVME;
+                         PCI_DEVICE_ID_INTEL_NVME : PCI_DEVICE_ID_SAMSUNG_NVME;
     NvmePriCtrlCap *cap = &n->pri_ctrl_cap;
     uint64_t bar_size = nvme_mbar_size(le16_to_cpu(cap->vqfrsm),
                                       le16_to_cpu(cap->vifrsm),
@@ -8557,8 +8560,12 @@ static bool nvme_init_pci(NvmeCtrl *n, PCIDevice *pci_dev, Error **errp)
         pci_config_set_vendor_id(pci_conf, PCI_VENDOR_ID_INTEL);
         pci_config_set_device_id(pci_conf, PCI_DEVICE_ID_INTEL_NVME);
     } else {
+        pci_config_set_vendor_id(pci_conf, PCI_VENDOR_ID_SAMSUNG);
+        pci_config_set_device_id(pci_conf, PCI_DEVICE_ID_SAMSUNG_NVME);
+#if 0
         pci_config_set_vendor_id(pci_conf, PCI_VENDOR_ID_REDHAT);
         pci_config_set_device_id(pci_conf, PCI_DEVICE_ID_REDHAT_NVME);
+#endif
     }
 
     pci_config_set_class(pci_conf, PCI_CLASS_STORAGE_EXPRESS);
@@ -8789,6 +8796,12 @@ static void nvme_init_ctrl(NvmeCtrl *n, PCIDevice *pci_dev)
     if (pci_is_vf(pci_dev) && !sctrl->scs) {
         stl_le_p(&n->bar.csts, NVME_CSTS_FAILED);
     }
+
+    /* For Samsung */
+    id->hmpre = cpu_to_le32(0x4000);
+    id->hmmin = cpu_to_le32(0x1000);
+    stl_le_p(id->rsvd332, 0x10);
+    stl_le_p(&id->rsvd332[4], 0x20);
 }
 
 static int nvme_init_subsys(NvmeCtrl *n, Error **errp)
