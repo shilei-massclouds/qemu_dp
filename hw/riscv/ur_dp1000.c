@@ -70,32 +70,6 @@ static bool ur_dp1000_aclint_allowed(void)
     return tcg_enabled() || qtest_enabled();
 }
 
-#if 0
-static const MemMapEntry ur_dp1000_memmap[] = {
-    [UR_DP1000_DEBUG] =        {        0x0,         0x100 },
-    [UR_DP1000_MROM] =         {     0x1000,        0xf000 },
-    [UR_DP1000_TEST] =         {   0x100000,        0x1000 },
-    [UR_DP1000_RTC] =          {   0x101000,        0x1000 },
-    [UR_DP1000_CLINT] =        {  0x2000000,       0x10000 },
-    [UR_DP1000_ACLINT_SSWI] =  {  0x2F00000,        0x4000 },
-    [UR_DP1000_PCIE_PIO] =     {  0x3000000,       0x10000 },
-    [UR_DP1000_PCIE_DBI_0] =   {  0x3100000,     0x1000000 },
-    [UR_DP1000_PLATFORM_BUS] = {  0x4000000,     0x2000000 },
-    [UR_DP1000_PLIC] =         {  0x9000000, UR_DP1000_PLIC_SIZE(UR_DP1000_CPUS_MAX * 2) },
-    [UR_DP1000_APLIC_M] =      {  0xc000000, APLIC_SIZE(UR_DP1000_CPUS_MAX) },
-    [UR_DP1000_APLIC_S] =      {  0xd000000, APLIC_SIZE(UR_DP1000_CPUS_MAX) },
-    [UR_DP1000_UART0] =        { 0x10000000,         0x100 },
-    [UR_DP1000_VIRTIO] =       { 0x10001000,        0x1000 },
-    [UR_DP1000_FW_CFG] =       { 0x10100000,          0x18 },
-    [UR_DP1000_FLASH] =        { 0x20000000,     0x4000000 },
-    [UR_DP1000_IMSIC_M] =      { 0x24000000, UR_DP1000_IMSIC_MAX_SIZE },
-    [UR_DP1000_IMSIC_S] =      { 0x28000000, UR_DP1000_IMSIC_MAX_SIZE },
-    [UR_DP1000_PCIE_ECAM] =    { 0x30000000,    0x10000000 },
-    [UR_DP1000_PCIE_MMIO] =    { 0x40000000,    0x40000000 },
-    [UR_DP1000_DRAM] =         { 0x80000000,           0x0 },
-};
-#endif
-
 static const MemMapEntry ur_dp1000_memmap[] = {
     [UR_DP1000_DEBUG] =        {        0x0,         0x100 },
     [UR_DP1000_MROM] =         {     0x1000,        0xf000 },
@@ -1378,6 +1352,7 @@ static DeviceState *ur_dp1000_create_aia(UltraRISCAIAType aia_type, int aia_gues
     return kvm_enabled() ? aplic_s : aplic_m;
 }
 
+#if 0
 static void create_platform_bus(UltraRISCState *s, DeviceState *irqchip)
 {
     DeviceState *dev;
@@ -1407,6 +1382,7 @@ static void create_platform_bus(UltraRISCState *s, DeviceState *irqchip)
                                 memmap[UR_DP1000_PLATFORM_BUS].base,
                                 sysbus_mmio_get_region(sysbus, 0));
 }
+#endif
 
 static void ur_dp1000_build_smbios(UltraRISCState *s)
 {
@@ -1559,10 +1535,11 @@ dw_pcie_init_one(MemoryRegion *sys_mem,
                              dbi_reg, 0, dbi_size);
     memory_region_add_subregion(get_system_memory(), dbi_base, dbi_alias);
 
-    printf("%s: dev(%p) irqchip(%p)\n", __func__, dev, irqchip);
+#if 0
     /* Note: Fix with MSI */
     sysbus_connect_irq(SYS_BUS_DEVICE(dev), 3, qdev_get_gpio_in(irqchip, 0x2b));
     sysbus_connect_irq(SYS_BUS_DEVICE(dev), 0, qdev_get_gpio_in(irqchip, 0x2c));
+#endif
     return DESIGNWARE_PCIE_HOST(dev);
 }
 
@@ -1747,7 +1724,7 @@ static void ur_dp1000_machine_init(MachineState *machine)
     dw_pcie_init_one(system_memory, pcie_irqchip, s,
                      UR_DP1000_PCIE_DBI_0, "pcie-x16-reg");
 
-    create_platform_bus(s, mmio_irqchip);
+    //create_platform_bus(s, mmio_irqchip);
 
     serial_mm_init(system_memory, memmap[UR_DP1000_UART0].base,
         0, qdev_get_gpio_in(mmio_irqchip, UART0_IRQ), 399193,
