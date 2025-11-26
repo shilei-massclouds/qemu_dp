@@ -1535,11 +1535,10 @@ dw_pcie_init_one(MemoryRegion *sys_mem,
                              dbi_reg, 0, dbi_size);
     memory_region_add_subregion(get_system_memory(), dbi_base, dbi_alias);
 
-#if 0
     /* Note: Fix with MSI */
     sysbus_connect_irq(SYS_BUS_DEVICE(dev), 3, qdev_get_gpio_in(irqchip, 0x2b));
     sysbus_connect_irq(SYS_BUS_DEVICE(dev), 0, qdev_get_gpio_in(irqchip, 0x2c));
-#endif
+
     return DESIGNWARE_PCIE_HOST(dev);
 }
 
